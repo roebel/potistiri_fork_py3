@@ -7,6 +7,10 @@ import ConfigParser as cfgparse
 import getpass
 from string import ascii_lowercase as lowercase, digits
 from random import choice
+from os import mkdir
+from os.path import isfile
+
+conf_dir = '/home/' + getpass.getuser() + '/.config/potistiri/'
 
 
 def aneva(server, up_pass, expire, one_time, file_key, filepath):
@@ -40,7 +44,7 @@ def aneva(server, up_pass, expire, one_time, file_key, filepath):
 def read_conf(arg):
     c = cfgparse.ConfigParser()
     try:
-        with open('/home/' + getpass.getuser() + '/.potistirirc', 'rb') as f:
+        with open(conf_dir + 'servers.conf', 'rb') as f:
             try:
                 c.readfp(f)
                 return c.get(c.sections()[0], arg)
@@ -49,6 +53,34 @@ def read_conf(arg):
                 return False
     except IOError:
         return False
+
+
+def offer_init():
+    if not isfile(conf_dir + 'servers.conf'):
+        mes = 'Want to save your coquelicot provider' + \
+               'details in a config file?\n'
+        choice = raw_input(mes).lower()
+        if choice in {'yes', 'y', '', ' '}:
+            try:
+                mkdir(conf_dir)
+            except IOError:
+                exit(1)
+            c = cfgparse.RawConfigParser()
+            service_mes = 'Type the name of the service: '
+            url_mes = 'Type the https:// address of the file server: '
+            paswd_mes = 'Type the upload pass used for this server: '
+            section = raw_input(service_mes)
+            url = raw_input(url_mes)
+            paswd = raw_input(paswd_mes)
+            c.add_section(section)
+            c.set(section, 'server', url)
+            c.set(section, 'pass', paswd)
+            with open(conf_dir + 'servers.conf', 'wb') as f:
+                c.write(f)
+        else:
+            exit(0)
+    else:
+        print(conf_dir + 'servers.conf already exists. Edit it, lazy!')
 
 
 def main():
@@ -60,31 +92,41 @@ def main():
                         action='store_true')
     parser.add_argument('--file-key', '-k', dest='file_key',
                         action='store_true')
-    parser.add_argument('--file', '-f', dest='filepath', required=True)
+    parser.add_argument('--file', '-f', dest='filepath')
+    parser.add_argument('--setconf', dest='setconf', action='store_true')
     args = parser.parse_args()
 
-    if args.server is None:
-        args.server = read_conf('server')
-    if args.up_pass is None:
-        args.up_pass = read_conf('pass')
-    if not (args.server and args.up_pass):
-        exit('Missing server and/or upload-password arguments')
-    if args.file_key:
-        m = 'Type passphrase to lock the uploaded file. ' + \
-              'Or just hit enter to create one for you: '
-        file_key = getpass.getpass(m)
-        if not file_key:
-            file_key = ''.join(choice(lowercase+digits) for _ in range(25))
-
-    print(aneva(
-        args.server,
-        args.up_pass,
-        args.expire,
-        args.one_time,
-        file_key if args.file_key else '',
-        args.filepath))
-    if args.file_key:
-        print('Download pass: {}'.format(file_key))
+    if args.setconf:
+        offer_init()
+    else:
+        fpath = args.filepath
+        if fpath is not None:
+            if not isfile(fpath):
+                exit('{} not found or not readable.'.format(fpath))
+        else:
+            exit('Missing the file argument')
+        if args.server is None:
+            args.server = read_conf('server')
+        if args.up_pass is None:
+            args.up_pass = read_conf('pass')
+        if not (args.server and args.up_pass):
+            print('Missing server and/or upload-password arguments')
+            exit('Try --setconf to store them in a config file.')
+        if args.file_key:
+            m = 'Type passphrase to lock the uploaded file. ' + \
+                'Or just hit enter to create one for you: '
+            file_key = getpass.getpass(m)
+            if not file_key:
+                file_key = ''.join(choice(lowercase+digits) for _ in range(25))
+        print(aneva(
+            args.server,
+            args.up_pass,
+            args.expire,
+            args.one_time,
+            file_key if args.file_key else '',
+            fpath))
+        if args.file_key:
+            print('Download pass: {}'.format(file_key))
 
 if __name__ == '__main__':
     main()
