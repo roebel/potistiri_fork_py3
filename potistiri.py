@@ -14,6 +14,11 @@ conf_dir = '/home/' + getpass.getuser() + '/.config/potistiri/'
 
 
 def aneva(server, post_params, filepath):
+    '''
+    This function performs the HTTPS POST request to the coquelicot server.
+    "post_params" are constructed as a list of tuples since ordering actually
+    matters.
+    '''
     try:
         with open(filepath, 'rb') as f:
             post_params += [('file', f)]
