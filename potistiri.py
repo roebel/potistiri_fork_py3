@@ -57,12 +57,17 @@ def read_conf(arg):
 
 def offer_init():
     if not isfile(conf_dir + 'servers.conf'):
-        mes = 'Want to save your coquelicot provider' + \
+        mes = 'Want to save your coquelicot provider ' + \
                'details in a config file?\n'
         choice = raw_input(mes).lower()
         if choice in {'yes', 'y', '', ' '}:
             try:
                 mkdir(conf_dir)
+            except OSError, e:
+                if e.errno == 17:
+                    pass
+                else:
+                    exit(1)
             except IOError:
                 exit(1)
             c = cfgparse.RawConfigParser()
@@ -118,6 +123,7 @@ def main():
             file_key = getpass.getpass(m)
             if not file_key:
                 file_key = ''.join(choice(lowercase+digits) for _ in range(25))
+
         print(aneva(
             args.server,
             args.up_pass,
