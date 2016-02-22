@@ -13,21 +13,14 @@ from os.path import isfile
 conf_dir = '/home/' + getpass.getuser() + '/.config/potistiri/'
 
 
-def aneva(server, up_pass, expire, one_time, file_key, filepath):
+def aneva(server, post_params, filepath):
     try:
         with open(filepath, 'rb') as f:
-            files_list = [
-                ('upload_password', str(up_pass)),
-                ('any_number', 'true' if not one_time else ''),
-                ('expire', str(expire)),
-                ('one_time', 'true' if one_time else ''),
-                ('file_key', str(file_key)),
-                ('file', f)
-                ]
+            post_params += [('file', f)]
 
             server += 'upload' if server.endswith('/') else '/upload'
             try:
-                r = requests.post(server, files=files_list)
+                r = requests.post(server, files=post_params)
             except Exception as e:
                 print(e)
 
@@ -39,6 +32,30 @@ def aneva(server, up_pass, expire, one_time, file_key, filepath):
                 return 'HTTP Error {}'.format(r.status_code)
     except IOError:
         return 'File to be uploaded not found or not readable'
+
+
+def pass_post(up_pass, expire, one_time, file_key):
+    '''
+    This function constructs POST parameters
+    for coquelicot instances with simple upload password.
+    '''
+    post_params = [
+        ('upload_password', str(up_pass)),
+        ('any_number', 'true' if not one_time else ''),
+        ('expire', str(expire)),
+        ('one_time', 'true' if one_time else ''),
+        ('file_key', str(file_key)),
+        ]
+
+    return post_params
+
+
+def ldap_post():
+    '''
+    This function constructs POST parameters
+    for coquelicot instances with LDAP authentication.
+    '''
+    pass
 
 
 def read_conf(arg):
@@ -126,10 +143,10 @@ def main():
 
         print(aneva(
             args.server,
-            args.up_pass,
-            args.expire,
-            args.one_time,
-            file_key if args.file_key else '',
+            pass_post(args.up_pass,
+                      args.expire,
+                      args.one_time,
+                      file_key if args.file_key else ''),
             fpath))
         if args.file_key:
             print('Download pass: {}'.format(file_key))
