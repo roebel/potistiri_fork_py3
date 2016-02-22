@@ -119,19 +119,17 @@ def main():
                         action='store_true')
     parser.add_argument('--file-key', '-k', dest='file_key',
                         action='store_true')
-    parser.add_argument('--file', '-f', dest='filepath')
-    parser.add_argument('--setconf', dest='setconf', action='store_true')
+    ga = parser.add_mutually_exclusive_group(required=True)
+    ga.add_argument('--file', '-f', dest='filepath')
+    ga.add_argument('--setconf', dest='setconf', action='store_true')
     args = parser.parse_args()
 
     if args.setconf:
         offer_init()
     else:
         fpath = args.filepath
-        if fpath is not None:
-            if not isfile(fpath):
-                exit('{} not found or not readable.'.format(fpath))
-        else:
-            exit('Missing the file argument')
+        if not isfile(fpath):
+            exit('{} not found or not readable.'.format(fpath))
         if args.server is None:
             args.server = read_conf('server')
         if args.up_pass is None:
