@@ -17,11 +17,13 @@ potistiri has a configuration file placed in:
 
     ~/.config/potistiri/servers.conf
 
-This conf file can store connection details for a certain coquelicot instance such as the service's url, authentication type and authentication credentials.
+This file can store connection details for a certain coquelicot instance such as the service's url, authentication type and authentication credentials.
 
 You can run potistiri with the '--setconf' parameter in order to initialize the configuration file. Alternatively,you may directly create and edit the file.
 
-Sample configurations files are included in this repo, one for each authentication type, but it's basically like this:
+Sample configurations files are included in this repo, one for each authentication type, but it's basically like this.
+
+### LDAP ###
 
     [some_service_name]
     server = https://files.provider.org
@@ -32,6 +34,8 @@ in case the coquelicot provider needs LDAP authentication. For LDAP providers yo
 
     chmod o-r ~/.config/potistiri/servers.conf
 
+### simple pass ###
+
 In case of a provider with simple pass authentication conf should look like that:
 
     [some_service_name]
@@ -40,7 +44,6 @@ In case of a provider with simple pass authentication conf should look like that
     pass = some-upload-password
 
 This pass is actually globally set for the provider and not bound to each user, thus can be considered safe to write on disk.
-
 
 ## Usage
 
