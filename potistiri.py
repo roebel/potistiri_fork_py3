@@ -150,6 +150,7 @@ def main():
         offer_init()
     else:
         fpath = args.filepath
+        server_type = ''
         if not isfile(fpath):
             exit('{} not found or not readable.'.format(fpath))
         if args.server is None:

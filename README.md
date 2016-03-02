@@ -55,14 +55,9 @@ All the options offered in a coquelicot instance web UI can be passed as paramet
 - -u/--ldap-user <user> : user in case of a LDAP provider
 - --setconf : guides user through configuration file initialization
 
-
-Usage examples:
-
+### Usage examples ###
 
     potistiri --setconf
     potistiri -f /tmp/ko
-
-
     potistiri -s https://file.ohmy.net -p passme -f /tmp/la
-
     potistiri -s https://arxeio.net -u ldapalex -f mysecrets.yaml
