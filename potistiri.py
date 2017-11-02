@@ -26,7 +26,7 @@ except NameError: pass
 conf_dir = join(environ['HOME'], '.config','potistiri')
 conf_file = join(conf_dir, 'servers.conf')
 
-def aneva(server, post_list, filepath):
+def aneva(server, post_params_list, filepath):
     '''
     This function performs the HTTPS POST request to the coquelicot server.
     "post_params" are constructed as a list of tuples since ordering actually
@@ -34,12 +34,11 @@ def aneva(server, post_list, filepath):
     '''
     try:
         with open(filepath, 'rb') as f:
-            #post_params += [('file', (filepath, f))]
-            post_params = MultipartEncoder(dict(post_list+[('file', (filepath, f))]))
-            
+
+            post_params = MultipartEncoder(post_params_list+[('file', (filepath, f))])
+
             server += 'upload' if server.endswith('/') else '/upload'
             try:
-                #r = requests.post(server, files=post_params)
                 r = requests.post(server, data=post_params, 
                                   headers={'Content-Type': post_params.content_type})
             except Exception as e:
