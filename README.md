@@ -11,12 +11,10 @@ The present fork extends the original version in multiple ways:
   - support file uploads for files > 2GB (using requests_toolbelt)
   - support uploading multiple files using the same settings
 
-For installation the original instructions apply using however the following download location
+For installation the original instructions apply using however a different download location:
 
-   wget https://raw.githubusercontent.com/roebel/potistiri_fork_py3/master/potistiri.py   -O /usr/local/bin/potistiri
-   chmod +x /usr/local/bin/potistiri
-
-
+    wget https://raw.githubusercontent.com/roebel/potistiri_fork_py3/master/potistiri.py   -O /usr/local/bin/potistiri3
+    chmod +x /usr/local/bin/potistiri3
 
 ## Original potistiri README
 
