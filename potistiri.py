@@ -157,7 +157,7 @@ def main():
     parser.add_argument('--one-time', '-o', dest='one_time',  action='store_true')
     parser.add_argument('-k', '--file-key',  dest='file_key',  action='store_true')
     ga = parser.add_mutually_exclusive_group(required=True)
-    ga.add_argument('-f', '--file', dest='filepath', help="filename to upload")
+    ga.add_argument('-f', '--file', dest='filepath', nargs="+", help="filename to upload")
     ga.add_argument('--setconf', dest='setconf', action='store_true')
     gb = parser.add_mutually_exclusive_group()
     gb.add_argument('-u', '--ldap-user', dest='ldapuser')
@@ -167,10 +167,7 @@ def main():
     if args.setconf:
         offer_init()
     else:
-        fpath = args.filepath
         server_type = ''
-        if not isfile(fpath):
-            exit('{} not found or not readable.'.format(fpath))
         if args.server is None:
             args.server = read_conf('server')
             if not args.server:
@@ -224,10 +221,14 @@ def main():
         else :
             expire_string="{0:d}min".format(expire_mins)
 
-        print("file: {0}\noneshot: {1}\nexpires: {2}".format(fpath, args.one_time, expire_string))
-        res=aneva(args.server, post_params, fpath)
-        if res is not None:
-            print("download link: {res[0]}\n{res[1]}".format(res=res))
+        print("upload mode  oneshot={0} expires={1}".format(args.one_time, expire_string))
+        for fpath in  args.filepath:
+            if not isfile(fpath):
+                print('{} not found or not readable -- skipping.'.format(fpath))
+                continue
+            res=aneva(args.server, post_params, fpath)
+            if res is not None:
+                print("{0} -> {res[0]}, {res[1]}".format(fpath, res=res))
 
         if args.file_key:
             print('Download pass: {}'.format(file_key))
