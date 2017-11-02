@@ -191,6 +191,10 @@ def main():
             m = 'Type ldap password: '
             ldap_pass = getpass.getpass(m)
 
+        logfile = read_conf('logfile')
+        if logfile:
+            logfp = open(logfile, "w+")
+            
         if args.file_key:
             m = 'Type passphrase to lock the uploaded file. ' + \
                 'Or just hit enter to create one for you: '
@@ -228,7 +232,10 @@ def main():
                 continue
             res=aneva(args.server, post_params, fpath)
             if res is not None:
-                print("{0} -> {res[0]}, {res[1]}".format(fpath, res=res))
+                print("{0} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(fpath, res=res,oneshot=args.one_time))
+                if logfile:
+                    print("{0} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(fpath, res=res,oneshot=args.one_time),
+                              file=logfp)
 
         if args.file_key:
             print('Download pass: {}'.format(file_key))
