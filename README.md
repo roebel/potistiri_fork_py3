@@ -2,14 +2,12 @@
 
 potistiri_fork_py3 is a fork of potistiri (https://gitlab.com/alexaf/potistiri) originally developped by Alexandros Afentoulis. 
 
-potistiri is a python cli client for [coquelicot](https://coquelicot.potager.org/) file sharing instances. Currently supports two authentication methods: 'simplepass' and 'ldap'.
-
 The present fork extends the original version in multiple ways:
 
-  - support python 3 and python 2
-  - properly determine HOME directory for storing config files under linux and MacOS
-  - support file uploads for files > 2GB (using requests_toolbelt)
-  - support uploading multiple files using the same settings
+  - support for python 3 (and python 2),
+  - properly determine HOME directory for storing config files under linux and MacOS,
+  - support file uploads for files > 2GB (using requests_toolbelt),
+  - support uploading multiple files using the same settings.
 
 For installation the original instructions apply using however a different download location:
 
@@ -17,6 +15,8 @@ For installation the original instructions apply using however a different downl
     chmod +x /usr/local/bin/potistiri3
 
 ## Original potistiri README
+
+potistiri is a python cli client for [coquelicot](https://coquelicot.potager.org/) file sharing instances. Currently supports two authentication methods: 'simplepass' and 'ldap'.
 
 ## Installation
 
