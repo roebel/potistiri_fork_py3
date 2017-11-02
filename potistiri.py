@@ -1,19 +1,32 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import argparse
+# needed for sending very large files when python is not able to read the complete file
+from requests_toolbelt import MultipartEncoder
 import requests
 import re
-import ConfigParser as cfgparse
+try:
+    import ConfigParser as cfgparse
+except ImportError:
+    import configparser as cfgparse
+
 import getpass
 from string import ascii_lowercase as lowercase, digits
 from random import choice
-from os import mkdir
-from os.path import isfile
+import sys
+from os import mkdir, environ
+from os.path import isfile, join
 
-conf_dir = '/home/' + getpass.getuser() + '/.config/potistiri/'
+# establish Python2/3 compatible input
+try: input = raw_input
+except NameError: pass
 
+conf_dir = join(environ['HOME'], '.config','potistiri')
+conf_file = join(conf_dir, 'servers.conf')
 
-def aneva(server, post_params, filepath):
+def aneva(server, post_list, filepath):
     '''
     This function performs the HTTPS POST request to the coquelicot server.
     "post_params" are constructed as a list of tuples since ordering actually
@@ -21,22 +34,30 @@ def aneva(server, post_params, filepath):
     '''
     try:
         with open(filepath, 'rb') as f:
-            post_params += [('file', f)]
-
+            #post_params += [('file', (filepath, f))]
+            post_params = MultipartEncoder(dict(post_list+[('file', (filepath, f))]))
+            
             server += 'upload' if server.endswith('/') else '/upload'
             try:
-                r = requests.post(server, files=post_params)
+                #r = requests.post(server, files=post_params)
+                r = requests.post(server, data=post_params, 
+                                  headers={'Content-Type': post_params.content_type})
             except Exception as e:
-                print(e)
-
+                print("upload failed", file=sys.stderr)
+                print(e, file=sys.stderr)
+                return None
+            
             if r.status_code == 200:
                 return [l.split('>')[1].split('<')[0]
                         for l in r.text.split('\n')
-                        if re.search('textarea', l)][0]
+                        if re.search('textarea', l) or re.search('available', l)]
             else:
-                return 'HTTP Error {}'.format(r.status_code)
+                print('HTTP Error {}'.format(r.status_code), file=sys.stderr)
+                return None
+
     except IOError:
-        return 'File to be uploaded not found or not readable'
+        print( 'File to be uploaded not found or not readable', file=sys.stderr)
+        return None
 
 
 def pass_post(up_pass, expire, one_time, file_key):
@@ -75,7 +96,7 @@ def ldap_post(ldap_user, ldap_pass, expire, one_time, file_key):
 def read_conf(arg):
     c = cfgparse.ConfigParser()
     try:
-        with open(conf_dir + 'servers.conf', 'rb') as f:
+        with open(conf_file, 'r') as f:
             try:
                 c.readfp(f)
                 return c.get(c.sections()[0], arg)
@@ -87,14 +108,14 @@ def read_conf(arg):
 
 
 def offer_init():
-    if not isfile(conf_dir + 'servers.conf'):
+    if not isfile(conf_file):
         mes = 'Want to save your coquelicot provider ' + \
                'details in a config file?\n'
-        choice = raw_input(mes).lower()
+        choice = input(mes).lower()
         if choice in {'yes', 'y', '', ' '}:
             try:
                 mkdir(conf_dir)
-            except OSError, e:
+            except OSError as e:
                 if e.errno == 17:
                     pass
                 else:
@@ -109,41 +130,39 @@ def offer_init():
             paswd_mes = 'Type the upload pass used for this server: '
             ldap_user_mes = 'Type the ldap user: '
 
-            section = raw_input(service_mes)
-            url = raw_input(url_mes)
+            section = input(service_mes)
+            url = input(url_mes)
             c.add_section(section)
             c.set(section, 'server', url)
 
-            authtype = raw_input(authtype_mes)
+            authtype = input(authtype_mes)
             c.set(section, 'type', authtype)
             if authtype == 'simple':
-                paswd = raw_input(paswd_mes)
+                paswd = input(paswd_mes)
                 c.set(section, 'pass', paswd)
             elif authtype == 'ldap':
-                ldap_user = raw_input(ldap_user_mes)
+                ldap_user = input(ldap_user_mes)
                 c.set(section, 'user', ldap_user)
-            with open(conf_dir + 'servers.conf', 'wb') as f:
+            with open(conf_file, 'w') as f:
                 c.write(f)
         else:
             exit(0)
     else:
-        print(conf_dir + 'servers.conf already exists. Edit it, lazy!')
+        print(conf_file+' already exists. Edit it, lazy!', file=sys.stderr)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--server', '-s', dest='server')
-    parser.add_argument('--expire', '-e', dest='expire', default='60')
-    parser.add_argument('--one-time', '-o', dest='one_time',
-                        action='store_true')
-    parser.add_argument('--file-key', '-k', dest='file_key',
-                        action='store_true')
+    parser.add_argument('--expire', '-e', default=str(1440*7), help="expiration time in minutes (Def: %(default)s)")
+    parser.add_argument('--one-time', '-o', dest='one_time',  action='store_true')
+    parser.add_argument('-k', '--file-key',  dest='file_key',  action='store_true')
     ga = parser.add_mutually_exclusive_group(required=True)
-    ga.add_argument('--file', '-f', dest='filepath')
+    ga.add_argument('-f', '--file', dest='filepath', help="filename to upload")
     ga.add_argument('--setconf', dest='setconf', action='store_true')
     gb = parser.add_mutually_exclusive_group()
-    gb.add_argument('--ldap-user', '-u', dest='ldapuser')
-    gb.add_argument('--upload-password', '-p', dest='up_pass')
+    gb.add_argument('-u', '--ldap-user', dest='ldapuser')
+    gb.add_argument('-p', '--upload-password', dest='up_pass')
     args = parser.parse_args()
 
     if args.setconf:
@@ -156,7 +175,7 @@ def main():
         if args.server is None:
             args.server = read_conf('server')
             if not args.server:
-                print('Missing server argument.')
+                print('Missing server argument.',file=sys.stderr)
                 exit('Try --setconf to store it in a config file.')
             server_type = read_conf('type')
 
@@ -166,7 +185,7 @@ def main():
             args.ldapuser = read_conf('user')
             ldap_pass = read_conf('pass')
         if not (args.up_pass or args.ldapuser):
-            print('Missing connection arguments')
+            print('Missing connection arguments',file=sys.stderr)
             exit('Try --setconf to store them in a config file.')
         if args.ldapuser and server_type == 'simple':
             exit('Cannot use ldap authentication with this type of provider.')
@@ -195,7 +214,22 @@ def main():
                                     args.one_time,
                                     file_key if args.file_key else '')
 
-        print(aneva(args.server, post_params, fpath))
+        expire_time_min =int(args.expire)
+        expire_days = (expire_time_min//1440)
+        expire_hs   = (expire_time_min - expire_days*1440)//60
+        expire_mins = (expire_time_min - expire_days*1440 - expire_hs*60)
+        if expire_days > 0:
+            expire_string="{0:d}days:{1:d}hours:{2:d}min".format(expire_days, expire_hs, expire_mins)
+        elif expire_hs > 0 :
+            expire_string="{0:d}hours:{1:d}min".format(expire_hs, expire_mins)
+        else :
+            expire_string="{0:d}min".format(expire_mins)
+
+        print("file: {0}\noneshot: {1}\nexpires: {2}".format(fpath, args.one_time, expire_string))
+        res=aneva(args.server, post_params, fpath)
+        if res is not None:
+            print("download link: {res[0]}\n{res[1]}".format(res=res))
+
         if args.file_key:
             print('Download pass: {}'.format(file_key))
 
