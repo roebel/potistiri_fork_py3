@@ -13,7 +13,7 @@ except ImportError:
     import configparser as cfgparse
 
 import getpass
-from string import ascii_lowercase as lowercase, digits
+from string import ascii_lowercase as lowercase, digits, ascii_uppercase as uppercase
 from random import choice
 import sys
 from os import mkdir, environ
@@ -151,19 +151,23 @@ def offer_init():
 
 
 def main():
+    expiration_days = 7
     parser = argparse.ArgumentParser()
     parser.add_argument('--server', '-s', dest='server')
-    parser.add_argument('--expire', '-e', default=str(1440*7), help="expiration time in minutes (Def: %(default)s)")
-    parser.add_argument('--one-time', '-o', dest='one_time',  action='store_true')
-    parser.add_argument('-k', '--file-key',  dest='file_key',  action='store_true')
+    parser.add_argument('--expire', '-e', default=expiration_days, type=float, help="expiration time in days (use float number for incomplete days) (Def: %(default)s)")
+    parser.add_argument('--one-time', '-o', dest='one_time',  action='store_true', help="delete the uploaded file after a single download (Def %(default)s)")
+    parser.add_argument('-k', '--file-key',  dest='file_key', nargs="?", const="10", default=None, 
+                        help="establish download password, specify either the password or the number of chars you want to be present in an automatically generated password (Def %(default)s)")
     ga = parser.add_mutually_exclusive_group(required=True)
     ga.add_argument('-f', '--file', dest='filepath', nargs="+", help="filename to upload")
     ga.add_argument('--setconf', dest='setconf', action='store_true')
     gb = parser.add_mutually_exclusive_group()
     gb.add_argument('-u', '--ldap-user', dest='ldapuser')
     gb.add_argument('-p', '--upload-password', dest='up_pass')
+    gb.add_argument('-n', '--dry-run', action="store_true", dest='dry_run', help="dry run, do not actually upload anything (Def: %(default)s)")
     args = parser.parse_args()
 
+    expire_time_min = int(args.expire * 60 * 24)
     if args.setconf:
         offer_init()
     else:
@@ -193,28 +197,27 @@ def main():
 
         logfile = read_conf('logfile')
         if logfile:
-            logfp = open(logfile, "w+")
+            logfp = open(logfile, "a+")
             
-        if args.file_key:
-            m = 'Type passphrase to lock the uploaded file. ' + \
-                'Or just hit enter to create one for you: '
-            file_key = getpass.getpass(m)
-            if not file_key:
-                file_key = ''.join(choice(lowercase+digits) for _ in range(25))
+        if args.file_key is not None:
+            
+            if len(args.file_key) <= 2 and len([cc for cc in args.file_key if cc not in "0123456789" ]) == 0:
+                file_key = ''.join(choice(lowercase+digits+uppercase) for _ in range(int(args.file_key)))
+            else:
+                file_key = args.file_key
 
         if args.up_pass:
             post_params = pass_post(args.up_pass,
-                                    args.expire,
+                                    str(expire_time_min),
                                     args.one_time,
                                     file_key if args.file_key else '')
         else:
             post_params = ldap_post(args.ldapuser,
                                     ldap_pass,
-                                    args.expire,
+                                    str(expire_time_min),
                                     args.one_time,
                                     file_key if args.file_key else '')
 
-        expire_time_min =int(args.expire)
         expire_days = (expire_time_min//1440)
         expire_hs   = (expire_time_min - expire_days*1440)//60
         expire_mins = (expire_time_min - expire_days*1440 - expire_hs*60)
@@ -225,20 +228,33 @@ def main():
         else :
             expire_string="{0:d}min".format(expire_mins)
 
+        dry_run_mrk = ""
+        if args.dry_run:
+            dry_run_mrk = "dry-run::"
         print("upload mode  oneshot={0} expires={1}".format(args.one_time, expire_string))
         for fpath in  args.filepath:
             if not isfile(fpath):
                 print('{} not found or not readable -- skipping.'.format(fpath))
                 continue
-            res=aneva(args.server, post_params, fpath)
+            print("uploading {0}".format(fpath))
+            sys.stdout.flush()
+            if args.dry_run:
+                print("testing only - skip upload")
+                res = ["download-link", "file availability"]
+            else:
+                res=aneva(args.server, post_params, fpath)
             if res is not None:
-                print("{0} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(fpath, res=res,oneshot=args.one_time))
-                if logfile:
-                    print("{0} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(fpath, res=res,oneshot=args.one_time),
+                print("{dry_run}{path} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(path=fpath, res=res,oneshot=args.one_time, dry_run=dry_run_mrk))
+                if args.file_key:
+                    print('{dry_run}Download pass is: {passkey}'.format(passkey=file_key, dry_run=dry_run_mrk))
+                if logfile :
+                    print("{dry_run}{path} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(path=fpath, res=res,oneshot=args.one_time, dry_run=dry_run_mrk),
+                              file=logfp)
+                    print('{dry_run}Download pass is: {passkey}'.format(passkey=file_key, dry_run=dry_run_mrk), 
                               file=logfp)
 
-        if args.file_key:
-            print('Download pass: {}'.format(file_key))
+                    logfp.flush()
+                sys.stdout.flush()
 
 if __name__ == '__main__':
     main()
