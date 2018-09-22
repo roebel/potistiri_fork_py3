@@ -192,7 +192,7 @@ def main():
         if args.up_pass and server_type == 'ldap':
             exit('Cannot use simple pass authentication with ldap provider.')
         if args.ldapuser and not ldap_pass:
-            m = 'Type ldap password: '
+            m = 'Type ldap password for user {0}: '.format(args.ldapuser)
             ldap_pass = getpass.getpass(m)
 
         logfile = read_conf('logfile')
@@ -244,11 +244,11 @@ def main():
             else:
                 res=aneva(args.server, post_params, fpath)
             if res is not None:
-                print("{dry_run}{path} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(path=fpath, res=res,oneshot=args.one_time, dry_run=dry_run_mrk))
+                print("{dry_run}{path} : link: {res[0]}\n {res[1]}, oneshot={oneshot}".format(path=fpath, res=res,oneshot=args.one_time, dry_run=dry_run_mrk))
                 if args.file_key:
                     print('{dry_run}Download pass is: {passkey}'.format(passkey=file_key, dry_run=dry_run_mrk))
                 if logfile :
-                    print("{dry_run}{path} -> {res[0]}, {res[1]}, oneshot={oneshot}".format(path=fpath, res=res,oneshot=args.one_time, dry_run=dry_run_mrk),
+                    print("{dry_run}{path} -> {res[0]} :: {res[1]}, oneshot={oneshot}".format(path=fpath, res=res,oneshot=args.one_time, dry_run=dry_run_mrk),
                               file=logfp)
                     print('{dry_run}Download pass is: {passkey}'.format(passkey=file_key, dry_run=dry_run_mrk), 
                               file=logfp)
