@@ -4,9 +4,11 @@ from __future__ import print_function
 
 import argparse
 # needed for sending very large files when python is not able to read the complete file
-from requests_toolbelt import MultipartEncoder
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+
 import requests
 import re
+import time
 try:
     import ConfigParser as cfgparse
 except ImportError:
@@ -26,6 +28,30 @@ except NameError: pass
 conf_dir = join(environ['HOME'], '.config','potistiri')
 conf_file = join(conf_dir, 'servers.conf')
 
+
+class monitor_call_back(object):
+    def __init__(self, encoder):
+        #self.total_size = len(encoder)
+        self.total_size = 0
+        self.last_bytes_read = 0
+        self.first_call_s = time.time()
+        self.last_call_s = self.first_call_s
+
+    def __call__(self, monitor):
+        bytes_read = monitor.bytes_read
+        now_sec = time.time()
+        if self.last_call_s + 5 < now_sec:
+            print("\r {0:5d}MB transfered in {1:4d}s, curr/avg transfer speed: {2:8.3f}/{3:8.3f} MB/s".format(bytes_read//1000000,
+                                                                                   int(now_sec - self.first_call_s),
+                                                                    (bytes_read - self.last_bytes_read)
+                                                                        /(1000000.*(now_sec-self.last_call_s)),
+                                                                    bytes_read/(1000000.*(now_sec-self.first_call_s))),
+                      file=sys.stdout, end="")
+            self.last_bytes_read = bytes_read
+            self.last_call_s = now_sec
+            sys.stdout.flush()
+    
+
 def aneva(server, post_params_list, filepath):
     '''
     This function performs the HTTPS POST request to the coquelicot server.
@@ -37,10 +63,14 @@ def aneva(server, post_params_list, filepath):
 
             post_params = MultipartEncoder(post_params_list+[('file', (filepath, f))])
 
+            monitored_pp = MultipartEncoderMonitor(post_params, monitor_call_back(post_params))
+            
             server += 'upload' if server.endswith('/') else '/upload'
             try:
-                r = requests.post(server, data=post_params, 
+                print("")
+                r = requests.post(server, data=monitored_pp, 
                                   headers={'Content-Type': post_params.content_type})
+                print("")
             except Exception as e:
                 print("upload failed", file=sys.stderr)
                 print(e, file=sys.stderr)
